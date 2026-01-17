@@ -1,0 +1,6 @@
+translations.csv
+__pycache__/
+*.pyc
+.env
+venv/
+env/

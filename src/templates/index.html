@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepL to Anki Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">DeepL to Anki</h1>
+                <p class="text-gray-600">Translate words and save them for Anki flashcards</p>
+            </div>
+
+            <!-- Translation Card -->
+            <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+                <div class="mb-6">
+                    <label for="word" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter a word to translate:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="word" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                        placeholder="Type a word..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <!-- Language Selection -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="source_lang" class="block text-sm font-medium text-gray-700 mb-2">
+                            From:
+                        </label>
+                        <select 
+                            id="source_lang" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        >
+                            <option value="ES">Spanish</option>
+                            <option value="EN">English</option>
+                            <option value="DE">German</option>
+                            <option value="FR">French</option>
+                            <option value="IT">Italian</option>
+                            <option value="NL">Dutch</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="target_lang" class="block text-sm font-medium text-gray-700 mb-2">
+                            To:
+                        </label>
+                        <select 
+                            id="target_lang" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        >
+                            <option value="EN-US">English (US)</option>
+                            <option value="NL">Dutch</option>
+                            <option value="DE">German</option>
+                            <option value="FR">French</option>
+                            <option value="ES">Spanish</option>
+                            <option value="IT">Italian</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button 
+                    id="translateBtn" 
+                    class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-200 shadow-md hover:shadow-lg"
+                >
+                    Translate & Save
+                </button>
+
+                <!-- Result Display -->
+                <div id="result" class="mt-6 hidden">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-green-500 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-600 mb-1">Original:</p>
+                                <p id="originalWord" class="text-lg font-semibold text-gray-800 mb-3"></p>
+                                <p class="text-sm text-gray-600 mb-1">Translation:</p>
+                                <p id="translatedWord" class="text-lg font-semibold text-indigo-600"></p>
+                                <p class="text-xs text-green-600 mt-3">✓ Saved to translations.tsv</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="error" class="mt-6 hidden">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-red-500 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <div>
+                                <p id="errorMessage" class="text-sm text-red-800"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Recent Translations</h2>
+                    <button 
+                        id="refreshBtn" 
+                        class="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    >
+                        Refresh
+                    </button>
+                </div>
+                <div id="history" class="space-y-2">
+                    <p class="text-gray-500 text-sm">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wordInput = document.getElementById('word');
+        const translateBtn = document.getElementById('translateBtn');
+        const resultDiv = document.getElementById('result');
+        const errorDiv = document.getElementById('error');
+        const originalWord = document.getElementById('originalWord');
+        const translatedWord = document.getElementById('translatedWord');
+        const errorMessage = document.getElementById('errorMessage');
+        const historyDiv = document.getElementById('history');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const sourceLang = document.getElementById('source_lang');
+        const targetLang = document.getElementById('target_lang');
+
+        // Translate on button click
+        translateBtn.addEventListener('click', translateWord);
+
+        // Translate on Enter key
+        wordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                translateWord();
+            }
+        });
+
+        // Refresh history
+        refreshBtn.addEventListener('click', loadHistory);
+
+        async function translateWord() {
+            const word = wordInput.value.trim();
+            
+            if (!word) {
+                showError('Please enter a word to translate');
+                return;
+            }
+
+            // Hide previous results
+            resultDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+
+            // Show loading state
+            translateBtn.disabled = true;
+            translateBtn.textContent = 'Translating...';
+
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        word: word,
+                        source_lang: sourceLang.value,
+                        target_lang: targetLang.value
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Translation failed');
+                }
+
+                // Show result
+                originalWord.textContent = data.word;
+                translatedWord.textContent = data.translation;
+                resultDiv.classList.remove('hidden');
+
+                // Clear input
+                wordInput.value = '';
+                
+                // Reload history
+                loadHistory();
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                translateBtn.disabled = false;
+                translateBtn.textContent = 'Translate & Save';
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const translations = await response.json();
+
+                if (translations.length === 0) {
+                    historyDiv.innerHTML = '<p class="text-gray-500 text-sm">No translations yet</p>';
+                    return;
+                }
+
+                // Show last 10 translations
+                const recent = translations.slice(-10).reverse();
+                historyDiv.innerHTML = recent.map(t => `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                        <div>
+                            <span class="font-medium text-gray-800">${escapeHtml(t.word)}</span>
+                            <span class="text-gray-400 mx-2">→</span>
+                            <span class="text-indigo-600">${escapeHtml(t.translation)}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                historyDiv.innerHTML = '<p class="text-red-500 text-sm">Failed to load history</p>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+</html>

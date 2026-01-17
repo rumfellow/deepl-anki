@@ -1,0 +1,23 @@
+[Unit]
+Description=DeepL to Anki Translator
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/deepl-anki:latest
+ContainerName=deepl-anki
+PublishPort=5000:5000
+
+# Set your DeepL API key here or use systemd environment file
+Environment=DEEPL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx:fx
+
+# Mount volume for persistent translations
+Volume=%h/anki/translations.tsv:/app/translations.tsv:Z
+
+[Service]
+# Auto-restart policy
+Restart=on-failure
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
